@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     private Vector<ClientHandler> clients;
@@ -19,22 +21,29 @@ public class Server {
             throw new RuntimeException("Не удалось подключиться к БД");
         }
         authService = new DBAuthService();
+        ExecutorService executorService = Executors.newFixedThreadPool(100); // Точное количество только в реальных условиях
+
         try (ServerSocket serverSocket = new ServerSocket(8189)) {
             System.out.println("Сервер запущен на порту 8189");
             while (true) {
                 Socket socket = serverSocket.accept();
-                try {
-                    new ClientHandler(this, socket);
-                    System.out.println("Подключился новый клиент");
-                } catch (IOException e) {
-                    System.out.println("WARNING! По какой-то причине не удалось создать обработчик клиента");
-                }
+
+                executorService.execute(() -> {
+                    try {
+                        new ClientHandler(this, socket);
+                        System.out.println("Подключился новый клиент");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        System.out.println("WARNING! По какой-то причине не удалось создать обработчик клиента");
+                    }
+                });
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            System.out.println("Сервер завершил свою работу");
+            executorService.shutdown();
             SQLHandler.disconnect();
+            System.out.println("Сервер завершил свою работу");
         }
     }
 

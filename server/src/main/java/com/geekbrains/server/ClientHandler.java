@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
 
 public class ClientHandler {
     private String nickname;
@@ -21,16 +22,15 @@ public class ClientHandler {
         this.socket = socket;
         this.in = new DataInputStream(socket.getInputStream());
         this.out = new DataOutputStream(socket.getOutputStream());
-        new Thread(() -> {
-            try {
-                while (!checkAuth()) ;
-                while (readMessage()) ;
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                ClientHandler.this.disconnect();
-            }
-        }).start();
+
+        try {
+            while (!checkAuth()) ;
+            while (readMessage()) ;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            ClientHandler.this.disconnect();
+        }
     }
 
     public void sendMsg(String msg) {
